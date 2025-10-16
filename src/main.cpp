@@ -12,6 +12,33 @@
 // Provide the RTDB payload printing info
 #include "addons/RTDBHelper.h"
 
+/*
+ * ═══════════════════════════════════════════════════════════════
+ *  SMART LIBRARY MANAGEMENT SYSTEM
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * TECHNOLOGY USAGE:
+ *
+ * 1. RFID (MFRC522) - For STUDENTS only
+ *    - Student check-in/check-out
+ *    - Uses SPI communication
+ *    - Frequency: 13.56MHz
+ *
+ * 2. NFC (PN532) - For BOOKS only
+ *    - Book borrowing/returning
+ *    - Book information lookup
+ *    - Uses I2C communication
+ *    - Frequency: 13.56MHz
+ *
+ * WORKFLOW:
+ * - Student Check-in/out: Scan RFID card → Done
+ * - Borrow Book: Scan book NFC tag → Scan student RFID card → Done
+ * - Return Book: Scan book NFC tag → Scan student RFID card → Done
+ * - Book Lookup: Scan book NFC tag → See details
+ *
+ * ═══════════════════════════════════════════════════════════════
+ */
+
 // ─── PIN CONFIGURATION ───────────────────────────────
 #define RFID_SS_PIN 5
 #define RFID_RST_PIN 4
@@ -52,7 +79,7 @@ bool firebaseReady = false;
 struct Student {
   String studentId;
   String name;
-  String rfidCard;
+  String rfidCard;            // RFID card UID (read by MFRC522)
   unsigned long checkInTime;
   bool isCheckedIn;
   int booksBorrowed;
@@ -63,7 +90,7 @@ struct Book {
   String bookId;
   String title;
   String author;
-  String rfidTag;
+  String nfcTag;              // NFC tag UID (read by PN532)
   bool isAvailable;
   String borrowedBy;
   unsigned long borrowedTime;
@@ -89,6 +116,9 @@ unsigned long lastScan = 0;
 String currentStudentRFID = "";
 unsigned long lastNoiseAlert = 0;
 unsigned long lastFirebaseSync = 0;
+unsigned long lastScreenUpdate = 0;
+int currentScreen = 0;
+bool systemIdle = true;
 
 // NTP Time Server
 const char* ntpServer = "pool.ntp.org";
@@ -96,8 +126,8 @@ const long gmtOffset_sec = 0;
 const int daylightOffset_sec = 0;
 
 // ─── FUNCTION DECLARATIONS ───────────────────────────
-String readRFID();
-String readNFC();
+String readRFID();                                     // Read student RFID cards
+String readNFC();                                      // Read book NFC tags
 void beep(int duration);
 void displayStatus(String line1, String line2);
 void handleOccupancy();
@@ -105,15 +135,16 @@ void checkNoise();
 void initializeFirebase();
 void initializeSampleData();
 String getFormattedTime();
-void handleStudentCheckInOut(String rfidCard);
-void handleBookTransaction(String bookRFID);
-void findBookByNFC(String nfcTag);
+void handleStudentCheckInOut(String rfidCard);         // Student check-in/out using RFID
+void handleBookTransaction(String bookNFC);            // Book borrow/return using NFC
 int findStudentByRFID(String rfid);
-int findBookByRFID(String rfid);
+int findBookByTag(String tagUid);                      // Find book by NFC tag UID
 void syncStudentToFirebase(int index);
 void syncBookToFirebase(int index);
 void syncStatsToFirebase();
 void addTransactionToFirebase(String studentId, String bookId, String type);
+void updateIdleScreen();                               // Rotate info screens when idle
+int getAvailableBookCount();                           // Count available books
 
 // ─── SETUP ───────────────────────────────────────────
 void setup() {
@@ -210,7 +241,7 @@ void loop() {
     lastFirebaseSync = millis();
   }
 
-  // Check for RFID scan (Student Cards or Book Tags)
+  // Check for RFID scan (Student Cards ONLY)
   String uidRFID = readRFID();
   if (uidRFID != "") {
     Serial.println("\n[RFID SCANNED] UID: " + uidRFID);
@@ -220,29 +251,37 @@ void loop() {
     if (studentIndex != -1) {
       handleStudentCheckInOut(uidRFID);
     } else {
-      // Check if it's a book
-      int bookIndex = findBookByRFID(uidRFID);
-      if (bookIndex != -1) {
-        handleBookTransaction(uidRFID);
-      } else {
-        displayStatus("Unknown Card", uidRFID.substring(0, 12));
-        beep(100);
-        delay(100);
-        beep(100);
-        Serial.println("⚠️  Unknown RFID Tag");
-        delay(2000);
-        displayStatus("Library System", "Ready!");
-      }
+      displayStatus("Unknown Card", uidRFID.substring(0, 12));
+      beep(100);
+      delay(100);
+      beep(100);
+      Serial.println("⚠️  Unknown Student RFID Card");
+      delay(2000);
+      displayStatus("Library System", "Ready!");
     }
 
     lastScan = millis();
   }
 
-  // Check for NFC scan (Book Search)
+  // Check for NFC scan (Book Borrowing/Returning)
   String uidNFC = readNFC();
   if (uidNFC != "") {
     Serial.println("\n[NFC SCANNED] UID: " + uidNFC);
-    findBookByNFC(uidNFC);
+
+    // Check if it's a book
+    int bookIndex = findBookByTag(uidNFC);
+    if (bookIndex != -1) {
+      handleBookTransaction(uidNFC);
+    } else {
+      displayStatus("Book Not Found", uidNFC.substring(0, 12));
+      beep(100);
+      delay(100);
+      beep(100);
+      Serial.println("⚠️  Unknown Book NFC Tag");
+      delay(2000);
+      displayStatus("Library System", "Ready!");
+    }
+
     lastScan = millis();
   }
 
@@ -251,6 +290,9 @@ void loop() {
 
   // Check noise levels
   checkNoise();
+
+  // Update idle screen with stats rotation (when system is idle)
+  updateIdleScreen();
 
   delay(100);
 }
@@ -452,16 +494,18 @@ void handleStudentCheckInOut(String rfidCard) {
   displayStatus("Library System", "Ready!");
 }
 
-// ─── BOOK TRANSACTION ────────────────────────────────
-void handleBookTransaction(String bookRFID) {
-  int bookIndex = findBookByRFID(bookRFID);
+// ─── BOOK TRANSACTION (NFC Tag + RFID Card) ──────────
+void handleBookTransaction(String bookNFC) {
+  int bookIndex = findBookByTag(bookNFC);
   if (bookIndex == -1) return;
 
   Book &book = books[bookIndex];
 
-  // Need to scan student card first
-  displayStatus("Scan Student", "Card Now");
+  // Need to scan student RFID card after scanning book NFC tag
+  displayStatus("Scan Student", "RFID Card");
   beep(100);
+
+  Serial.println("   Waiting for student RFID card (10 seconds)...");
 
   unsigned long waitStart = millis();
   while (millis() - waitStart < 10000) {
@@ -484,12 +528,13 @@ void handleBookTransaction(String bookRFID) {
           Serial.println("\n📖 BOOK BORROWED");
           Serial.println("   Book: " + book.title);
           Serial.println("   Student: " + student.name);
+          Serial.println("   Method: NFC Tag -> RFID Card");
 
           if (firebaseReady) {
             String bookPath = "/books/" + book.bookId;
             Firebase.RTDB.setString(&fbdo, (bookPath + "/title").c_str(), book.title);
             Firebase.RTDB.setString(&fbdo, (bookPath + "/author").c_str(), book.author);
-            Firebase.RTDB.setString(&fbdo, (bookPath + "/rfidTag").c_str(), book.rfidTag);
+            Firebase.RTDB.setString(&fbdo, (bookPath + "/nfcTag").c_str(), book.nfcTag);
             Firebase.RTDB.setString(&fbdo, (bookPath + "/shelf").c_str(), book.shelfLocation);
             Firebase.RTDB.setBool(&fbdo, (bookPath + "/isAvailable").c_str(), false);
             Firebase.RTDB.setString(&fbdo, (bookPath + "/borrowedBy").c_str(), student.studentId);
@@ -523,6 +568,7 @@ void handleBookTransaction(String bookRFID) {
             Serial.println("\n📚 BOOK RETURNED");
             Serial.println("   Book: " + book.title);
             Serial.println("   Student: " + student.name);
+            Serial.println("   Method: NFC Tag -> RFID Card");
 
             if (firebaseReady) {
               String bookPath = "/books/" + book.bookId;
@@ -569,7 +615,7 @@ void handleBookTransaction(String bookRFID) {
 
 // ─── FIND BOOK BY NFC ────────────────────────────────
 void findBookByNFC(String nfcTag) {
-  int bookIndex = findBookByRFID(nfcTag);
+  int bookIndex = findBookByTag(nfcTag);
 
   if (bookIndex != -1) {
     Book &book = books[bookIndex];
@@ -605,9 +651,9 @@ int findStudentByRFID(String rfid) {
   return -1;
 }
 
-int findBookByRFID(String rfid) {
+int findBookByTag(String tagUid) {
   for (int i = 0; i < bookCount; i++) {
-    if (books[i].rfidTag == rfid) return i;
+    if (books[i].nfcTag == tagUid) return i;
   }
   return -1;
 }
@@ -621,6 +667,63 @@ String getFormattedTime() {
   char timeStr[20];
   strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
   return String(timeStr);
+}
+
+// ─── BOOK STATISTICS ─────────────────────────────────
+int getAvailableBookCount() {
+  int available = 0;
+  for (int i = 0; i < bookCount; i++) {
+    if (books[i].isAvailable) {
+      available++;
+    }
+  }
+  return available;
+}
+
+// ─── IDLE SCREEN ROTATION ────────────────────────────
+void updateIdleScreen() {
+  // Only update if system has been idle for 5 seconds
+  if (millis() - lastScan < 5000) {
+    systemIdle = false;
+    return;
+  }
+
+  // Rotate screens every 5 seconds when idle
+  if (millis() - lastScreenUpdate > 5000) {
+    systemIdle = true;
+    lastScreenUpdate = millis();
+
+    int availableBooks = getAvailableBookCount();
+    int borrowedBooks = bookCount - availableBooks;
+
+    switch (currentScreen) {
+      case 0:
+        // Screen 1: System ready
+        displayStatus("Library System", "Ready!");
+        break;
+
+      case 1:
+        // Screen 2: Book statistics
+        displayStatus("Books: " + String(bookCount),
+                     "Avail:" + String(availableBooks) + " Out:" + String(borrowedBooks));
+        break;
+
+      case 2:
+        // Screen 3: People count
+        displayStatus("People Inside:", String(peopleCount) + " students");
+        break;
+
+      case 3:
+        // Screen 4: Total students registered
+        displayStatus("Total Students:", String(studentCount) + " registered");
+        break;
+    }
+
+    currentScreen++;
+    if (currentScreen > 3) {
+      currentScreen = 0;
+    }
+  }
 }
 
 // ─── FIREBASE FUNCTIONS ──────────────────────────────
@@ -713,7 +816,7 @@ void initializeSampleData() {
       String path = "/books/" + books[i].bookId;
       Firebase.RTDB.setString(&fbdo, (path + "/title").c_str(), books[i].title);
       Firebase.RTDB.setString(&fbdo, (path + "/author").c_str(), books[i].author);
-      Firebase.RTDB.setString(&fbdo, (path + "/rfidTag").c_str(), books[i].rfidTag);
+      Firebase.RTDB.setString(&fbdo, (path + "/nfcTag").c_str(), books[i].nfcTag);
       Firebase.RTDB.setString(&fbdo, (path + "/shelf").c_str(), books[i].shelfLocation);
       Firebase.RTDB.setBool(&fbdo, (path + "/isAvailable").c_str(), true);
       Firebase.RTDB.setString(&fbdo, (path + "/borrowedBy").c_str(), "");
@@ -754,7 +857,7 @@ void syncBookToFirebase(int index) {
 
   Firebase.RTDB.setString(&fbdo, (path + "/title").c_str(), book.title);
   Firebase.RTDB.setString(&fbdo, (path + "/author").c_str(), book.author);
-  Firebase.RTDB.setString(&fbdo, (path + "/rfidTag").c_str(), book.rfidTag);
+  Firebase.RTDB.setString(&fbdo, (path + "/nfcTag").c_str(), book.nfcTag);
   Firebase.RTDB.setString(&fbdo, (path + "/shelf").c_str(), book.shelfLocation);
   Firebase.RTDB.setBool(&fbdo, (path + "/isAvailable").c_str(), book.isAvailable);
   Firebase.RTDB.setString(&fbdo, (path + "/borrowedBy").c_str(), book.borrowedBy);

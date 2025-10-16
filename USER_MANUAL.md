@@ -18,8 +18,8 @@ The Smart Library Management System automates library operations using RFID/NFC 
 
 **Key Components:**
 - ESP32 Microcontroller
-- RFID RC522 Reader (for student cards and book tags)
-- NFC PN532 Reader (for book information lookup)
+- RFID RC522 Reader (for student cards only)
+- NFC PN532 Reader (for book tags - borrowing/returning/lookup)
 - 16x2 LCD Display (I2C)
 - IR Sensors (Entry & Exit)
 - Sound Sensor
@@ -60,9 +60,10 @@ The Smart Library Management System automates library operations using RFID/NFC 
 
 ### Physical Setup
 1. Mount IR sensors at library entrance (one on each side)
-2. Place RFID/NFC readers at checkout counter
-3. Install LCD display at visible location
-4. Position sound sensor in main reading area
+2. Place **RFID reader** at checkout counter (for student check-in/out)
+3. Place **NFC reader** at checkout counter (for book operations)
+4. Install LCD display at visible location
+5. Position sound sensor in main reading area
 
 ---
 
@@ -142,28 +143,30 @@ After upload, the system will:
 **Purpose:** Issue books to students
 
 **Steps:**
-1. Scan the **book's RFID tag**
-2. LCD shows: "Scan Student Card Now"
-3. Within 10 seconds, scan the **student's RFID card**
+1. Scan the **book's NFC tag** using the NFC reader (PN532)
+2. LCD shows: "Scan Student RFID Card"
+3. Within 10 seconds, scan the **student's RFID card** using the RFID reader (RC522)
 4. LCD shows: "Book Borrowed [Book Title]"
 5. Buzzer beeps once (200ms)
 6. Transaction logged to Firebase
 
 **Available Books:**
-| Book Title | Book ID | RFID Tag UID | Shelf Location |
-|------------|---------|--------------|----------------|
+| Book Title | Book ID | NFC Tag UID | Shelf Location |
+|------------|---------|-------------|----------------|
 | Arduino Guide | B001 | E7D2B865 | A1 |
 | ESP32 Projects | B002 | 7340AFFD | A2 |
 
 **Error Messages:**
 - "Timeout! Try Again" - No student card scanned within 10 seconds
-- "Unknown Card" - RFID tag not in database
+- "Book Not Found" - NFC tag not in database
+- "Unknown Card" - Student RFID card not in database
 
 **Serial Monitor Output:**
 ```
 📖 BOOK BORROWED
    Book: Arduino Guide
    Student: Student 1
+   Method: NFC Tag -> RFID Card
 ✅ Data saved to Firebase
 ```
 
@@ -174,21 +177,23 @@ After upload, the system will:
 **Purpose:** Accept returned books
 
 **Steps:**
-1. Scan the **book's RFID tag**
-2. LCD shows: "Scan Student Card Now"
-3. Scan the **student's RFID card** (must be the same student who borrowed it)
+1. Scan the **book's NFC tag** using the NFC reader (PN532)
+2. LCD shows: "Scan Student RFID Card"
+3. Scan the **student's RFID card** using the RFID reader (RC522) - must be the same student who borrowed it
 4. LCD shows: "Book Returned [Book Title]"
 5. Buzzer beeps once (200ms)
 6. Book marked as available in database
 
 **Error Messages:**
 - "Wrong Student! Not your book" - Different student trying to return (double beep alert)
+- "Timeout! Try Again" - No student card scanned within 10 seconds
 
 **Serial Monitor Output:**
 ```
 📚 BOOK RETURNED
    Book: Arduino Guide
    Student: Student 1
+   Method: NFC Tag -> RFID Card
 ✅ Data saved to Firebase
 ```
 
@@ -268,20 +273,20 @@ int noiseThreshold = 500;  // Change value (0-4095)
 
 | Message | Meaning | Action Required |
 |---------|---------|-----------------|
-| "Library System Ready!" | System idle | Scan a card |
+| "Library System Ready!" | System idle | Scan a card/tag |
 | "Welcome! [Name]" | Student checked in | None |
 | "Goodbye! [Name]" | Student checked out | None |
-| "Scan Student Card Now" | Waiting for student card | Scan student RFID |
+| "Scan Student RFID Card" | Waiting for student card | Scan student RFID card |
 | "Book Borrowed [Title]" | Book issued | None |
 | "Book Returned [Title]" | Book returned | None |
 | "Wrong Student! Not your book" | Return error | Scan correct student |
 | "Timeout! Try Again" | No card scanned | Restart transaction |
-| "Unknown Card" | Card not registered | Check database |
+| "Unknown Card" | Student card not registered | Check database |
+| "Book Not Found" | Book NFC tag not registered | Check database |
 | "Entry Detected Count: X" | Someone entered | None |
 | "Exit Detected Count: X" | Someone exited | None |
 | "QUIET PLEASE! Noise: XXX" | Noise alert | Lower noise |
 | "[Book Title] Shelf: XX" | Book info lookup | None |
-| "Book Not Found" | Unknown NFC tag | Check database |
 
 ---
 
@@ -320,7 +325,7 @@ URL: `https://[your-project]-default-rtdb.asia-southeast1.firebasedatabase.app/`
 │   ├── 📁 B001/
 │   │   ├── title: "Arduino Guide"
 │   │   ├── author: "Tech Author"
-│   │   ├── rfidTag: "E7D2B865"
+│   │   ├── rfidTag: "E7D2B865" (NFC tag UID)
 │   │   ├── shelf: "A1"
 │   │   ├── isAvailable: true/false
 │   │   ├── borrowedBy: "S001"
@@ -414,21 +419,29 @@ URL: `https://[your-project]-default-rtdb.asia-southeast1.firebasedatabase.app/`
 
 ---
 
-### Problem: "Unknown Card" message
+### Problem: "Unknown Card" or "Book Not Found" message
 
 **Causes:**
-- Card UID not in database
-- Different card than sample data
+- Student RFID card UID not in database
+- Book NFC tag UID not in database
+- Different card/tag than sample data
 
 **Solutions:**
-1. Read card UID from Serial Monitor: `[RFID SCANNED] UID: XXXXXXXX`
-2. Add card to database in `initializeSampleData()` function (line 685)
-3. Update student/book RFID UID with actual card UID
+1. Read card/tag UID from Serial Monitor:
+   - `[RFID SCANNED] UID: XXXXXXXX` (for student cards)
+   - `[NFC SCANNED] UID: XXXXXXXX` (for book tags)
+2. Add card/tag to database in `initializeSampleData()` function (line 685)
+3. Update student RFID UID or book NFC UID with actual card/tag UID
 4. Re-upload code
 
-**Example:**
+**Example for Student:**
 ```cpp
-students[0] = {"S001", "Student 1", "YOUR_CARD_UID_HERE", 0, false, 0, {"", "", "", "", ""}};
+students[0] = {"S001", "Student 1", "YOUR_RFID_UID_HERE", 0, false, 0, {"", "", "", "", ""}};
+```
+
+**Example for Book:**
+```cpp
+books[0] = {"B001", "Arduino Guide", "Tech Author", "YOUR_NFC_UID_HERE", true, "", 0, 0, "A1"};
 ```
 
 ---
@@ -527,14 +540,14 @@ int noiseThreshold = 800;  // Increase value
 
 ---
 
-### Problem: "Timeout! Try Again" when borrowing
+### Problem: "Timeout! Try Again" when borrowing/returning
 
 **Cause:**
-- Student card not scanned within 10 seconds
+- Student RFID card not scanned within 10 seconds after scanning book NFC tag
 
 **Solution:**
-- Scan book tag, then quickly scan student card
-- Adjust timeout in code (line 467):
+- Scan book NFC tag first, then quickly scan student RFID card within 10 seconds
+- Adjust timeout in code (line 476):
 ```cpp
 while (millis() - waitStart < 15000) {  // Increase to 15 seconds
 ```
@@ -578,8 +591,10 @@ bookCount = 3;  // Update count
 
 **Format:**
 ```cpp
-{"BookID", "Title", "Author", "RFID_UID", isAvailable, borrowedBy, borrowedTime, dueTime, "ShelfLocation"}
+{"BookID", "Title", "Author", "NFC_UID", isAvailable, borrowedBy, borrowedTime, dueTime, "ShelfLocation"}
 ```
+
+**Note:** Books use NFC tags, not RFID tags. Obtain the NFC UID from Serial Monitor when scanning.
 
 ---
 
@@ -651,8 +666,8 @@ pio run -t clean     # Clean build
 ### 📚 Book Operations
 | Action | Steps |
 |--------|-------|
-| Borrow | Scan book tag → Scan student card → Confirmed |
-| Return | Scan book tag → Scan student card → Confirmed |
+| Borrow | Scan book NFC tag → Scan student RFID card → Confirmed |
+| Return | Scan book NFC tag → Scan student RFID card → Confirmed |
 | Search | Tap book NFC tag → See title & shelf |
 
 ### 👥 Monitoring
