@@ -110,18 +110,25 @@ A modern Next.js web dashboard is included for real-time monitoring and manageme
 ### Quick Start:
 ```bash
 cd web-dashboard
-pnpm install
-pnpm dev
+npm install
+# Copy .env.example to .env.local and add your Firebase credentials
+npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000)
 
-### Deploy to Vercel (FREE):
-```bash
-cd web-dashboard
-vercel
-```
+### Deploy to Production:
 
-**See: [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md)** for deployment guide
+**Option 1: Vercel (Recommended)**
+1. Push code to GitHub
+2. Import project at [vercel.com](https://vercel.com)
+3. **Important**: Set Root Directory to `web-dashboard` in project settings
+4. Add environment variables from `.env.example`
+5. Deploy
+
+**Option 2: Other Platforms**
+- Netlify, AWS Amplify, Docker (see `web-dashboard/README.md`)
+
+**Full documentation: [web-dashboard/README.md](web-dashboard/README.md)**
 
 ## 📖 Documentation
 

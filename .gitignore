@@ -3,3 +3,14 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# Web dashboard
+web-dashboard/.vercel
+web-dashboard/.next
+web-dashboard/node_modules
+web-dashboard/.env.local
+web-dashboard/.env
+
+# Editor
+.claude
+.DS_Store
