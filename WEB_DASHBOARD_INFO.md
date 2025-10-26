@@ -129,11 +129,33 @@ pnpm install
 
 ## Next Steps
 
+### Local Development
 1. ✅ Run `pnpm install` in web-dashboard folder
 2. ✅ Start with `pnpm dev`
 3. ✅ Test with your ESP32 device
 4. ✅ Scan RFID/NFC cards and watch real-time updates
 5. ✅ Add/edit students and books through the web UI
+
+### Deploy to Production (FREE)
+1. ✅ See [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) for quick deploy guide
+2. ✅ Or use: `cd web-dashboard && vercel`
+3. ✅ Your dashboard will be live in 2 minutes!
+4. ✅ Access from anywhere: `https://your-project.vercel.app`
+
+## Deployment
+
+The dashboard is **ready to deploy to Vercel** (100% free):
+
+- **Quick Deploy**: See [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md)
+- **Detailed Guide**: See [web-dashboard/DEPLOY_TO_VERCEL.md](web-dashboard/DEPLOY_TO_VERCEL.md)
+- **Checklist**: See [web-dashboard/DEPLOYMENT_CHECKLIST.md](web-dashboard/DEPLOYMENT_CHECKLIST.md)
+
+**Deploy in 3 commands**:
+```bash
+cd web-dashboard
+pnpm install -g vercel
+vercel --prod
+```
 
 ## Support
 
@@ -142,3 +164,5 @@ For detailed information, check the documentation files in the `web-dashboard` f
 ---
 
 **Your Smart Library Management System now has a professional web interface!** 🎉
+
+**Ready for production deployment to Vercel!** 🚀
