@@ -14,12 +14,12 @@ A modern Next.js web application with real-time Firebase integration for the Sma
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS
+- **Runtime**: React 19
+- **Styling**: Tailwind CSS 3.4
 - **Database**: Firebase Realtime Database
 - **Icons**: Lucide React
-- **UI Components**: Lucide React Icons
 
 ## Prerequisites
 
