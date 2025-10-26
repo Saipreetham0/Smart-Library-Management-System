@@ -1,0 +1,22 @@
+# PlatformIO files
+.pio
+include
+lib
+src
+test
+tools
+platformio.ini
+
+# Documentation
+*.md
+!web-dashboard/README.md
+
+# Git
+.git
+.gitignore
+
+# VSCode
+.vscode
+
+# Only deploy web-dashboard
+!web-dashboard
