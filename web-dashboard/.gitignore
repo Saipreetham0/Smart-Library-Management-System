@@ -5,6 +5,8 @@
 /.pnp
 .pnp.js
 pnpm-lock.yaml
+package-lock.json
+yarn.lock
 
 # testing
 /coverage
@@ -19,6 +21,7 @@ pnpm-lock.yaml
 # misc
 .DS_Store
 *.pem
+.claude
 
 # debug
 npm-debug.log*
@@ -28,9 +31,7 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
-
-# vercel
-.vercel
+.env.production
 
 # typescript
 *.tsbuildinfo

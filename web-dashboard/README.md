@@ -19,12 +19,12 @@ A modern Next.js web application with real-time Firebase integration for the Sma
 - **Styling**: Tailwind CSS
 - **Database**: Firebase Realtime Database
 - **Icons**: Lucide React
-- **Deployment**: Vercel (recommended)
+- **UI Components**: Lucide React Icons
 
 ## Prerequisites
 
 - Node.js 18+ installed
-- pnpm installed (`npm install -g pnpm`)
+- npm or pnpm package manager
 - Firebase account and project (same one used by ESP32)
 - Firebase Realtime Database enabled
 
@@ -37,6 +37,8 @@ A modern Next.js web application with real-time Firebase integration for the Sma
 
 2. **Install dependencies**:
    ```bash
+   npm install
+   # or
    pnpm install
    ```
 
@@ -73,6 +75,8 @@ A modern Next.js web application with real-time Firebase integration for the Sma
 Start the development server:
 
 ```bash
+npm run dev
+# or
 pnpm dev
 ```
 
@@ -81,6 +85,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## Building for Production
 
 ```bash
+npm run build
+npm start
+# or
 pnpm build
 pnpm start
 ```
@@ -195,36 +202,51 @@ The dashboard expects the following Firebase Realtime Database structure:
 
 ## Deployment
 
-### Deploy to Vercel (Recommended)
+This Next.js application can be deployed to various platforms:
 
+### Vercel
 1. Push your code to GitHub
-2. Go to [Vercel](https://vercel.com)
-3. Import your repository
-4. Add environment variables from `.env.local`
-5. Deploy
+2. Import repository at [Vercel](https://vercel.com)
+3. Add environment variables from `.env.example`
+4. Deploy
 
-### Deploy to Other Platforms
+### Netlify
+1. Connect your GitHub repository
+2. Build command: `npm run build`
+3. Publish directory: `.next`
+4. Add environment variables
 
-The app can be deployed to any platform that supports Next.js:
-- Netlify
+### Docker (Self-hosted)
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+### Other Platforms
 - AWS Amplify
 - Google Cloud Run
-- Self-hosted with Docker
+- DigitalOcean App Platform
 
 ## Troubleshooting
 
 ### Firebase Connection Issues
 
 If you see "Loading..." indefinitely:
-1. Check your Firebase credentials in `.env.local`
+1. Verify Firebase credentials in `.env.local`
 2. Ensure Firebase Realtime Database is enabled
 3. Check database rules allow read/write access
 4. Verify the ESP32 is writing data to Firebase
+5. Check browser console for errors
 
-### Database Rules
+### Database Security Rules
 
-For development, you can use these Firebase rules (update for production):
-
+For development:
 ```json
 {
   "rules": {
@@ -234,14 +256,22 @@ For development, you can use these Firebase rules (update for production):
 }
 ```
 
-For production, implement proper authentication and security rules.
+For production, implement proper security:
+```json
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null"
+  }
+}
+```
 
 ### No Data Showing
 
-1. Make sure ESP32 is connected and running
-2. Check Firebase Console to see if data is being written
-3. Verify database URL matches in both ESP32 and web app
-4. Check browser console for errors
+1. Ensure ESP32 is connected and running
+2. Verify data is being written in Firebase Console
+3. Check database URL matches in both ESP32 and web app
+4. Inspect browser console for errors
 
 ## ESP32 Integration
 
@@ -273,17 +303,13 @@ colors: {
 3. Create necessary components
 4. Add Firebase service functions in `lib/firebaseService.ts`
 
-## Support
+## Contributing
 
-For issues or questions:
-1. Check the ESP32 code documentation
-2. Review Firebase Console for data issues
-3. Check browser console for errors
-4. Ensure all dependencies are installed
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is part of the Smart Library Management System using ESP32.
+MIT License - feel free to use this project for your own smart library system.
 
 ## Next Steps
 
