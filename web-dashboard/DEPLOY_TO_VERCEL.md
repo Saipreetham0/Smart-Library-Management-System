@@ -57,11 +57,16 @@ git push -u origin main
 
 ### Step 4: Configure Root Directory
 
-**IMPORTANT**: Since your Next.js app is in the `web-dashboard` folder:
+**⚠️ CRITICAL STEP**: Since your Next.js app is in a subdirectory:
 
-1. In the import screen, click **"Edit"** next to Root Directory
-2. Set Root Directory to: `web-dashboard`
-3. Click **"Continue"**
+1. In the import screen, look for **"Root Directory"**
+2. Click **"Edit"** next to Root Directory
+3. Set Root Directory to: `web-dashboard`
+4. Click **"Continue"**
+
+**Without this step, deployment will fail with "No package.json found"!**
+
+![Where to set root directory](https://vercel.com/_next/image?url=https%3A%2F%2Fassets.vercel.com%2Fimage%2Fupload%2Fv1645567899%2Fdocs-assets%2Fstatic%2Fdocs%2Fprojects%2Froot-directory.png&w=3840&q=75)
 
 ### Step 5: Add Environment Variables
 

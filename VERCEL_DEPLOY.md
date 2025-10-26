@@ -22,6 +22,8 @@ pnpm install -g vercel
 
 ### Step 2: Navigate to Dashboard Folder
 
+**IMPORTANT**: You must deploy from the `web-dashboard` folder:
+
 ```bash
 cd web-dashboard
 ```
@@ -110,9 +112,13 @@ git push -u origin main
 1. Go to [vercel.com](https://vercel.com)
 2. Click **"Add New Project"**
 3. Import your GitHub repository
-4. **IMPORTANT**: Set **Root Directory** to `web-dashboard`
-5. Add environment variables (see list above)
-6. Click **"Deploy"**
+4. **⚠️ CRITICAL**: Click **"Edit"** next to **Root Directory**
+5. Set Root Directory to: `web-dashboard`
+6. Click **"Continue"**
+7. Add environment variables (see list above)
+8. Click **"Deploy"**
+
+**If you skip step 4-5, deployment will fail!**
 
 ---
 

@@ -95,9 +95,39 @@ Already configured in `platformio.ini`:
 - ArduinoJson
 - FirebaseClient
 
+## 🌐 Web Dashboard
+
+A modern Next.js web dashboard is included for real-time monitoring and management!
+
+### Features:
+- 📊 Real-time statistics dashboard
+- 👥 Student management (add, edit, delete)
+- 📚 Book inventory management
+- 📝 Transaction history
+- 🔔 Noise alerts monitoring
+- 📱 Mobile responsive design
+
+### Quick Start:
+```bash
+cd web-dashboard
+pnpm install
+pnpm dev
+```
+Open [http://localhost:3000](http://localhost:3000)
+
+### Deploy to Vercel (FREE):
+```bash
+cd web-dashboard
+vercel
+```
+
+**See: [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md)** for deployment guide
+
 ## 📖 Documentation
 
 - **[HOW_TO_SETUP_TAGS.md](HOW_TO_SETUP_TAGS.md)** - Tag setup guide (START HERE!)
+- **[WEB_DASHBOARD_INFO.md](WEB_DASHBOARD_INFO.md)** - Web dashboard guide
+- **[VERCEL_DEPLOY.md](VERCEL_DEPLOY.md)** - Deploy to Vercel
 - **`tools/tag_config_tool.ino`** - Simple tag scanner tool
 
 ## 🆘 Need Help?
