@@ -1,41 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { subscribeToStats, subscribeToStudents, subscribeToBooks, subscribeToTransactions } from '@/lib/firebaseService';
-import { Stats, Student, Book, Transaction } from '@/lib/types';
-import { BookOpen, Users, Activity, TrendingUp, UserCheck, Clock } from 'lucide-react';
+import { BookOpen, Users, Activity, UserCheck, Clock } from 'lucide-react';
 import StatCard from '@/components/StatCard';
 import RecentActivity from '@/components/RecentActivity';
+import { useStats, useStudents, useBooks, useTransactions } from '@/hooks';
 
 export default function Home() {
-  const [stats, setStats] = useState<Stats>({
-    totalStudents: 0,
-    totalBooks: 0,
-    peopleCount: 0,
-    totalTransactions: 0,
-  });
-  const [students, setStudents] = useState<Student[]>([]);
-  const [books, setBooks] = useState<Book[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubStats = subscribeToStats((data) => {
-      setStats(data);
-      setLoading(false);
-    });
-
-    const unsubStudents = subscribeToStudents(setStudents);
-    const unsubBooks = subscribeToBooks(setBooks);
-    const unsubTransactions = subscribeToTransactions(setTransactions);
-
-    return () => {
-      unsubStats();
-      unsubStudents();
-      unsubBooks();
-      unsubTransactions();
-    };
-  }, []);
+  const { stats, loading } = useStats();
+  const { students } = useStudents();
+  const { books } = useBooks();
+  const { transactions } = useTransactions();
 
   const availableBooks = books.filter(b => b.isAvailable).length;
   const borrowedBooks = books.filter(b => !b.isAvailable).length;
