@@ -49,14 +49,14 @@
 #define SOUND_SENSOR 34
 
 // ─── WiFi CONFIGURATION ──────────────────────────────
-const char* WIFI_SSID = "KSP";
-const char* WIFI_PASSWORD = "Admin@123";
+const char* WIFI_SSID = "your-wifi-ssid";
+const char* WIFI_PASSWORD = "your-wifi-password";
 
 // ─── FIREBASE CONFIGURATION ──────────────────────────
-#define API_KEY "AIzaSyCI0gN-FwbTzfS43_LURWjHAr_JfwDaglM"
+#define API_KEY "your-firebase-web-api-key"
 #define DATABASE_URL "https://smart-library-using-esp32-default-rtdb.asia-southeast1.firebasedatabase.app/"
-#define USER_EMAIL "user@Kspelectronics.in"
-#define USER_PASSWORD "123456789"
+#define USER_EMAIL "device@example.com"
+#define USER_PASSWORD "your-firebase-user-password"
 
 // ─── RFID SETUP ──────────────────────────────────────
 MFRC522 rfid(RFID_SS_PIN, RFID_RST_PIN);
